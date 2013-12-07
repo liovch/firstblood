@@ -9,6 +9,7 @@ import com.google.gson.annotations.SerializedName;
 import com.google.gson.Gson;
 import java.lang.Runtime;
 import java.io.FileReader;
+import java.io.File;
 
 public class FirstBlood {
 
@@ -80,7 +81,7 @@ public class FirstBlood {
    }
    
    public String downloadWebPage(String Url) throws Exception {
-      String cmd = "e:/code/dota/firstblood/tools/wget.exe --no-check-certificate -O e:/temp/replayurl " + Url;
+      String cmd = "e:/code/dota/firstblood/tools/wget.exe --no-check-certificate -T 5 -t 3 -O e:/temp/replayurl " + Url;
       Process p = Runtime.getRuntime().exec(cmd);
       p.waitFor();
 
@@ -158,20 +159,36 @@ public class FirstBlood {
       int start = url.lastIndexOf('/');
       if (start < 0) return;
       String fileName = url.substring(start);
+      String filePath = "e:/temp/replays" + fileName;
       
-      String cmd = "e:/code/dota/firstblood/tools/wget.exe -T 10 -O e:/temp/replays" + fileName + " " + url;
+      // check if the file already exists
+      File file = new File(filePath);
+      if (file != null && file.exists() && file.length() > 0) {
+         System.out.println("File already exists: " + filePath);
+         return;
+      }
+      
+      String cmd = "e:/code/dota/firstblood/tools/wget.exe -T 5 -t 3 -O " + filePath + " " + url;
       Process p = Runtime.getRuntime().exec(cmd);
       p.waitFor();
+      
+      long fileLength = file.length(); 
+      if (fileLength == 0) file.delete();
+      else System.out.println("Downloaded successfully. Replay size = " + fileLength);
    }
    
    public void run() throws Exception {
-      ArrayList<MatchHistory.Result.MatchDetails> matches = getMatchHistory();
-      System.out.println("Total number of matches = " + matches.size());
-      if (matches.isEmpty()) return;
-      for (MatchHistory.Result.MatchDetails match : matches) {
-         String replayURL = getReplayURL(match.match_id);
-         System.out.println("Getting replay for URL = " + replayURL);
-         downloadReplay(replayURL);
+      
+      for (;;) {
+         ArrayList<MatchHistory.Result.MatchDetails> matches = getMatchHistory();
+         System.out.println("Total number of matches = " + matches.size());
+         if (matches.isEmpty()) continue;
+         for (MatchHistory.Result.MatchDetails match : matches) {
+            String replayURL = getReplayURL(match.match_id);
+            System.out.println("Getting replay for URL = " + replayURL);
+            downloadReplay(replayURL);
+         }
+         System.out.println("Finished the queue. Starting over...\n");
       }
    }
 }
